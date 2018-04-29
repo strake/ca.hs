@@ -9,14 +9,13 @@ import Control.Applicative
 import Data.BitSet hiding (bits)
 import Data.Bits
 import Data.Char
-import Data.Foldable (elem)
 import qualified Data.List as List
 import Data.Word
 import Relation.Binary.Comparison
 import Text.Read (Read (..), readP_to_Prec)
 import Text.ParserCombinators.ReadP (ReadP)
 import qualified Text.ParserCombinators.ReadP as ReadP
-import Util (bind2)
+import Util ((∈), bind2)
 import Util.Bits
 
 import Data.Neighborhood.Hex as Neighborhood
@@ -34,7 +33,7 @@ instance Read Rule where
       where nbhds :: ReadP Word32
             nbhds = fmap (foldr (flip setBit . fromEnum) zeroBits . concat) . many $
                     bind2 cfg ((− fromEnum' '0') . fromEnum' <$> ReadP.satisfy isDigit)
-                    (many $ toLower <$> ReadP.satisfy ((`elem` "ompvas") . toLower))
+                    (many $ toLower <$> ReadP.satisfy ((∈ "ompvas") . toLower))
 
             cfg :: Alternative f => Word -> [Char] -> f [Nbhd]
             cfg 0 [] = pure [N0]
@@ -77,8 +76,8 @@ instance Show Rule where
 birth, death, survival, antisurvival :: Rule -> [Nbhd]
 birth = fmap toEnum . setBits . (.&. 0xFFFF) . bits
 survival = fmap toEnum . setBits . (`shiftR` 16) . bits
-death = flip filter [N0 ..] . (.) not . flip elem . survival
-antisurvival = flip filter [N0 ..] . (.) not . flip elem . birth
+death = flip filter [N0 ..] . (.) not . flip (∈) . survival
+antisurvival = flip filter [N0 ..] . (.) not . flip (∈) . birth
 
 isSelfComplementary :: Rule -> Bool
 isSelfComplementary r =
