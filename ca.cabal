@@ -18,8 +18,11 @@ library
   -- other-extensions:    
   build-depends:       base >=4.10 && <5
                      , alg >=0.2.2 && <0.3
+                     , bitwise >=1.0.0 && <1.1
+                     , largeword >=1.2
                      , util >=0.1.6 && <0.2
   -- hs-source-dirs:      
   default-language:    Haskell2010
   default-extensions:  LambdaCase
                      , GeneralizedNewtypeDeriving
+  ghc-options:         -Wall -Wno-name-shadowing

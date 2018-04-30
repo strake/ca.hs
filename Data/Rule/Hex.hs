@@ -1,4 +1,4 @@
-module Data.Rule.Hex (Rule, bits,
+module Data.Rule.Hex (Rule, bits, tabulate,
                       birth, death, survival, antisurvival,
                       isSelfComplementary) where
 
@@ -8,14 +8,17 @@ import qualified Prelude
 import Control.Applicative
 import Data.BitSet hiding (bits)
 import Data.Bits
+import Data.Bits.Bitwise (fromListLE, toListBE, toListLE)
+import Data.Bool
 import Data.Char
+import Data.LargeWord (Word128)
 import qualified Data.List as List
 import Data.Word
 import Relation.Binary.Comparison
 import Text.Read (Read (..), readP_to_Prec)
 import Text.ParserCombinators.ReadP (ReadP)
 import qualified Text.ParserCombinators.ReadP as ReadP
-import Util ((∈), bind2)
+import Util ((&), (∈), bind2)
 import Util.Bits
 
 import Data.Neighborhood.Hex as Neighborhood
@@ -83,3 +86,33 @@ isSelfComplementary :: Rule -> Bool
 isSelfComplementary r =
     birth r    == (List.sortOn fromEnum $ Neighborhood.complement <$> death r) &&
     survival r == (List.sortOn fromEnum $ Neighborhood.complement <$> antisurvival r)
+
+tabulate :: Rule -> Word128
+tabulate = fromListLE . \ r ->
+    let checkRule (xs, x) = toNbhd xs ∈ bool birth survival x r
+    in checkRule . arrange <$> [0..127]
+  where toNbhd :: Word8 -> Nbhd
+        toNbhd = isotropicize & \ case
+            0x00 -> N0
+            0x01 -> N1
+            0x03 -> N2o
+            0x05 -> N2m
+            0x09 -> N2p
+            0x07 -> N3v
+            0x0B -> N3a
+            0x15 -> N3s
+            0x0F -> N4o
+            0x17 -> N4m
+            0x1B -> N4p
+            0x1F -> N5
+            0x3F -> N6
+
+        arrange :: Word8 -> (Word8, Bool)
+        arrange = toListLE & \ [a, b, c, d, e, f, g, _] -> (fromListLE [a, b, e, g, f, c], d)
+        isotropicize x = minimum $ (\ k -> [x `rol` k, reverseBits x `shiftR` 2 `rol` k]) `concatMap` [0..5]
+
+        infixl 8 `rol`
+        x `rol` k = case k `mod` 6 of k -> (x `shiftL` k .|. x `shiftR` (6 - k)) .&. 0x3F
+
+reverseBits :: FiniteBits a => a -> a
+reverseBits = fromListLE . toListBE
