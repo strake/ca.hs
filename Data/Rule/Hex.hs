@@ -11,6 +11,7 @@ import Data.Bits
 import Data.Bits.Bitwise (fromListLE, toListBE, toListLE)
 import Data.Bool
 import Data.Char
+import Data.Foldable
 import Data.LargeWord (Word128)
 import qualified Data.List as List
 import Data.Word
@@ -18,7 +19,7 @@ import Relation.Binary.Comparison
 import Text.Read (Read (..), readP_to_Prec)
 import Text.ParserCombinators.ReadP (ReadP)
 import qualified Text.ParserCombinators.ReadP as ReadP
-import Util ((&), (∈), bind2)
+import Util ((&), (∈), altMap, bind2)
 import Util.Bits
 
 import Data.Neighborhood.Hex as Neighborhood
@@ -34,7 +35,7 @@ instance Read Rule where
         (\ b s -> s `shiftL` 16 .|. b) <$ ReadP.satisfy ((==) 'B' . toUpper) <*> nbhds <*
         optional (ReadP.char '/')      <* ReadP.satisfy ((==) 'S' . toUpper) <*> nbhds
       where nbhds :: ReadP Word32
-            nbhds = fmap (foldr (flip setBit . fromEnum) zeroBits . concat) . many $
+            nbhds = fmap (foldr (flip setBit . fromEnum) zeroBits . asum) . many $
                     bind2 cfg ((− fromEnum' '0') . fromEnum' <$> ReadP.satisfy isDigit)
                     (many $ toLower <$> ReadP.satisfy ((∈ "ompvas") . toLower))
 
@@ -69,7 +70,7 @@ instance Read Rule where
             fromEnum' = fromIntegral . fromEnum
 
 instance Show Rule where
-    show = \ r -> concat ["B", showNbhds $ birth r, "/S", showNbhds $ survival r]
+    show = \ r -> asum ["B", showNbhds $ birth r, "/S", showNbhds $ survival r]
       where showNbhds [] = ""
             showNbhds (N2o:N2m:N2p:xs) = "2" ++ showNbhds xs
             showNbhds (N3v:N3a:N3s:xs) = "3" ++ showNbhds xs
@@ -109,7 +110,7 @@ tabulate = fromListLE . \ r ->
 
         arrange :: Word8 -> (Word8, Bool)
         arrange = toListLE & \ [a, b, c, d, e, f, g, _] -> (fromListLE [a, b, e, g, f, c], d)
-        isotropicize x = minimum $ (\ k -> [x `rol` k, reverseBits x `shiftR` 2 `rol` k]) `concatMap` [0..5]
+        isotropicize x = minimum $ (\ k -> [x `rol` k, reverseBits x `shiftR` 2 `rol` k]) `altMap` [0..5]
 
         infixl 8 `rol`
         x `rol` k = case k `mod` 6 of k -> (x `shiftL` k .|. x `shiftR` (6 - k)) .&. 0x3F
