@@ -1,4 +1,6 @@
-module Data.Rule.Hex (Rule, bits, tabulate,
+{-# OPTIONS_GHC -Wno-error=incomplete-patterns -Wno-error=incomplete-uni-patterns #-}
+
+module Data.Rule.Hex (Rule, bits, tabulate, fromFn,
                       birth, death, survival, antisurvival,
                       isSelfComplementary) where
 
@@ -14,6 +16,8 @@ import Data.Char
 import Data.Foldable
 import Data.LargeWord (Word128)
 import qualified Data.List as List
+import Data.Universe.Class
+import Data.Universe.Instances.Base ()
 import Data.Word
 import Relation.Binary.Comparison
 import Text.Read (Read (..), readP_to_Prec)
@@ -76,6 +80,10 @@ instance Show Rule where
             showNbhds (N3v:N3a:N3s:xs) = "3" ++ showNbhds xs
             showNbhds (N4o:N4m:N4p:xs) = "4" ++ showNbhds xs
             showNbhds (x:xs) = show x ++ showNbhds xs
+
+fromFn :: (Nbhd -> Bool -> Bool) -> Rule
+fromFn = foldr (uncurry go) zeroBits . flip filter universe . uncurry
+  where go nbhd cell = flip setBit $ fromEnum nbhd + bool 0 16 cell
 
 birth, death, survival, antisurvival :: Rule -> [Nbhd]
 birth = fmap toEnum . setBits . (.&. 0xFFFF) . bits

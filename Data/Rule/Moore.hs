@@ -1,4 +1,6 @@
-module Data.Rule.Moore (Rule, bits, tabulate,
+{-# OPTIONS_GHC -Wno-error=incomplete-patterns -Wno-error=incomplete-uni-patterns #-}
+
+module Data.Rule.Moore (Rule, bits, tabulate, fromFn,
                         birth, death, survival, antisurvival) where
 
 import Prelude hiding (Eq, Ord)
@@ -13,6 +15,8 @@ import Data.Char
 import Data.Foldable
 import Data.LargeWord (Word128, Word256, LargeKey)
 import qualified Data.List as List
+import Data.Universe.Class
+import Data.Universe.Instances.Base ()
 import Data.Word
 import Relation.Binary.Comparison
 import Text.Read (Read (..), readP_to_Prec)
@@ -49,6 +53,10 @@ instance Show Rule where
       where showNbhds [] = ""
             showNbhds xs | Just (n, xs) <- altMap (\ n -> (,) n <$> (flip List.stripPrefix xs =<< cfg n [])) [0..8] = show n ++ showNbhds xs
             showNbhds (x:xs) = show x ++ showNbhds xs
+
+fromFn :: (Nbhd -> Bool -> Bool) -> Rule
+fromFn = foldr (uncurry go) zeroBits . flip filter universe . uncurry
+  where go nbhd cell = flip setBit $ fromEnum nbhd + bool 0 64 cell
 
 birth, death, survival, antisurvival :: Rule -> [Nbhd]
 birth = fmap toEnum . setBits . (.&. 0xFFFFFFFFFFFFFFFF) . bits

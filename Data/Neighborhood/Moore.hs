@@ -1,9 +1,22 @@
+{-# LANGUAGE DataKinds #-}
+
 module Data.Neighborhood.Moore where
 
-import Prelude hiding (Eq, Ord (..))
+import Prelude hiding (Eq, Ord (..), reverse)
 import qualified Prelude
 
+import qualified Data.Bits as Bits
+import Data.Bits.Bitwise (fromListLE, toListLE)
+import Data.Fin.List as Fin hiding (fromList)
+import qualified Data.Fin.List as Fin
+import Data.Foldable
+import Data.Function (on)
+import Data.Maybe (fromJust)
+import Data.Peano
+import Data.Universe.Class
+import Data.Word
 import Relation.Binary.Comparison as A
+import Util hiding (minimumBy)
 
 data Nbhd
   = N0 | N1c | N1e | N2c | N2e | N2k | N2a | N2i | N2n
@@ -11,7 +24,10 @@ data Nbhd
   | N4c | N4e | N4k | N4a | N4i | N4n | N4y | N4q | N4j | N4r | N4t | N4w | N4z
   | N5c | N5e | N5k | N5a | N5i | N5n | N5y | N5q | N5j | N5r
   | N6c | N6e | N6k | N6a | N6i | N6n | N7c | N7e | N8
-  deriving (Prelude.Eq, Enum)
+  deriving (Prelude.Eq, Enum, Bounded)
+
+instance Universe Nbhd
+instance Finite Nbhd
 
 instance PartialEq Nbhd where (≡) = (==)
 
@@ -108,3 +124,41 @@ complement N7c = N1c
 complement N7e = N1e
 complement N8 = N0
 complement x = x
+
+fromList :: List (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero)))))))) Bool -> Nbhd
+fromList = isotropicize & toList & (fromListLE :: _ -> Word8) & \ case
+    0x00 -> N0
+    0x01 -> N1c
+    0x02 -> N1e
+    0x05 -> N2c
+    0x0A -> N2e
+    0x09 -> N2k
+    0x03 -> N2a
+    0x22 -> N2i
+    0x11 -> N2n
+    0x15 -> N3c
+    0x2A -> N3e
+    0x29 -> N3k
+    0x0E -> N3a
+    0x07 -> N3i
+    0x0D -> N3n
+    0x25 -> N3y
+    0x13 -> N3q
+    0x0B -> N3j
+    0x23 -> N3r
+    0x55 -> N4c
+    0xAA -> N4e
+    0x2D -> N4k
+    0x0F -> N4a
+    0x36 -> N4i
+    0x17 -> N4n
+    0x35 -> N4y
+    0x39 -> N4q
+    0x2B -> N4j
+    0x2E -> N4r
+    0x27 -> N4t
+    0x1B -> N4w
+    0x33 -> N4z
+    x -> (complement . fromList . fmap not . fromJust . Fin.fromList . toListLE) x
+  where isotropicize :: _ Bool -> _ Bool
+        isotropicize x = minimumBy (compare `on` (fromListLE :: _ -> Word8) . toList) $ (\ k -> sequence [id, rotate 1 . reverse] . rotate (2*k) $ x) `altMap` [0..3]

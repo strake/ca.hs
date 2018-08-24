@@ -1,12 +1,24 @@
+{-# LANGUAGE DataKinds #-}
+
 module Data.Neighborhood.Hex where
 
-import Prelude hiding (Eq, Ord (..))
+import Prelude hiding (Eq, Ord (..), reverse)
 import qualified Prelude
 
+import Data.Bits.Bitwise
+import Data.Fin.List as Fin
+import Data.Foldable
+import Data.Peano
+import Data.Universe.Class
+import Data.Word
 import Relation.Binary.Comparison as A
+import Util
 
 data Nbhd = N0 | N1 | N2o | N2m | N2p | N3v | N3a | N3s | N4o | N4m | N4p | N5 | N6
-  deriving (Prelude.Eq, Enum)
+  deriving (Prelude.Eq, Enum, Bounded)
+
+instance Universe Nbhd
+instance Finite Nbhd
 
 instance PartialEq Nbhd where (≡) = (==)
 instance Eq Nbhd
@@ -77,3 +89,21 @@ complement = \ case
     N5  -> N1
     N6  -> N0
     x   -> x
+
+fromList :: List (Succ (Succ (Succ (Succ (Succ (Succ Zero)))))) Bool -> Nbhd
+fromList = isotropicize & toList & (fromListLE :: _ -> Word8) & \ case
+    0x00 -> N0
+    0x01 -> N1
+    0x03 -> N2o
+    0x05 -> N2m
+    0x09 -> N2p
+    0x07 -> N3v
+    0x0B -> N3a
+    0x15 -> N3s
+    0x0F -> N4o
+    0x17 -> N4m
+    0x1B -> N4p
+    0x1F -> N5
+    0x3F -> N6
+    _ -> error "Impossible!"
+  where isotropicize x = maximum $ (\ k -> sequence [id, reverse] . Fin.rotate k $ x) `altMap` [0..5]
