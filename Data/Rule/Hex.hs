@@ -16,6 +16,7 @@ import Data.Char
 import Data.Foldable
 import Data.LargeWord (Word128)
 import qualified Data.List as List
+import Data.OrdOfEnum
 import Data.Universe.Class
 import Data.Universe.Instances.Base ()
 import Data.Word
@@ -24,12 +25,16 @@ import Text.Read (Read (..), readP_to_Prec)
 import Text.ParserCombinators.ReadP (ReadP)
 import qualified Text.ParserCombinators.ReadP as ReadP
 import Util ((&), (∈), altMap, bind2)
-import Util.Bits
+import Util.Bits (setBits)
+import Util.Universe
 
 import Data.Neighborhood.Hex as Neighborhood
 
 newtype Rule = Rule (BitSet Word32)
   deriving (Prelude.Eq, Preord, PartialEq, Eq, PartialOrd, Bits, FiniteBits)
+
+instance Universe Rule where universe = fromFn . (. OrdOfEnum) . curry . unFn <$> (universe :: [Fn (OrdOfEnum Nbhd, Bool) Bool])
+instance Finite Rule
 
 bits :: Rule -> Word32
 bits (Rule (BitSet x)) = x
