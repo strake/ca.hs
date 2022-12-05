@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 
 module Data.Neighborhood.Hex where
@@ -5,14 +6,14 @@ module Data.Neighborhood.Hex where
 import Prelude hiding (Eq, Ord (..), reverse)
 import qualified Prelude
 
-import Data.Bits.Bitwise
+import Data.Bits
 import Data.Fin.List as Fin
-import Data.Foldable
 import Data.Peano
 import Data.Universe.Class
 import Data.Word
 import Relation.Binary.Comparison as A
 import Util
+import Util.Private.Bits
 
 data Nbhd = N0 | N1 | N2o | N2m | N2p | N3v | N3a | N3s | N4o | N4m | N4p | N5 | N6
   deriving (Prelude.Eq, Enum, Bounded)
@@ -91,7 +92,7 @@ complement = \ case
     x   -> x
 
 fromList :: List (Succ (Succ (Succ (Succ (Succ (Succ Zero)))))) Bool -> Nbhd
-fromList = isotropicize & toList & (fromListLE :: _ -> Word8) & \ case
+fromList = fromListLE & isotropicize & \ case
     0x00 -> N0
     0x01 -> N1
     0x03 -> N2o
@@ -104,6 +105,12 @@ fromList = isotropicize & toList & (fromListLE :: _ -> Word8) & \ case
     0x17 -> N4m
     0x1B -> N4p
     0x1F -> N5
-    0x3F -> N6
-    _ -> error "Impossible!"
-  where isotropicize x = maximum $ (\ k -> sequence [id, reverse] . Fin.rotate k $ x) `altMap` [0..5]
+    _    -> N6
+  where
+    isotropicize x = foldr min maxBound [f . flip rotateWord6 k $! x | !k <- [0..3], f <- [id, reverseBits6]]
+
+    rotateWord6 :: Word8 -> Int -> Word8
+    rotateWord6 x k = (shiftL x k .|. shiftR x (6 - k)) .&. 0x3F
+
+    reverseBits6 :: Word8 -> Word8
+    reverseBits6 = reverseBits8 . flip shiftL 2

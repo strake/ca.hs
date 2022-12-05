@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 
 module Data.Neighborhood.Moore where
@@ -6,17 +7,13 @@ import Prelude hiding (Eq, Ord (..), reverse)
 import qualified Prelude
 
 import qualified Data.Bits as Bits
-import Data.Bits.Bitwise (fromListLE, toListLE)
 import Data.Fin.List as Fin hiding (fromList)
-import qualified Data.Fin.List as Fin
-import Data.Foldable
-import Data.Function (on)
-import Data.Maybe (fromJust)
 import Data.Peano
 import Data.Universe.Class
 import Data.Word
 import Relation.Binary.Comparison as A
 import Util hiding (minimumBy)
+import Util.Private.Bits
 
 data Nbhd
   = N0 | N1c | N1e | N2c | N2e | N2k | N2a | N2i | N2n
@@ -126,7 +123,7 @@ complement N8 = N0
 complement x = x
 
 fromList :: List (Succ (Succ (Succ (Succ (Succ (Succ (Succ (Succ Zero)))))))) Bool -> Nbhd
-fromList = isotropicize & toList & (fromListLE :: _ -> Word8) & \ case
+fromList = fromListLE & isotropicize & \ case
     0x00 -> N0
     0x01 -> N1c
     0x02 -> N1e
@@ -159,6 +156,25 @@ fromList = isotropicize & toList & (fromListLE :: _ -> Word8) & \ case
     0x27 -> N4t
     0x1B -> N4w
     0x33 -> N4z
-    x -> (complement . fromList . fmap not . fromJust . Fin.fromList . toListLE) x
-  where isotropicize :: _ Bool -> _ Bool
-        isotropicize x = minimumBy (compare `on` (fromListLE :: _ -> Word8) . toList) $ (\ k -> sequence [id, rotate 1 . reverse] . rotate (2*k) $ x) `altMap` [0..3]
+    0xEA -> N5c
+    0xD5 -> N5e
+    0xD6 -> N5k
+    0xF1 -> N5a
+    0xF8 -> N5i
+    0xF2 -> N5n
+    0xDA -> N5y
+    0xEC -> N5q
+    0xF4 -> N5j
+    0xDC -> N5r
+    0xFA -> N6c
+    0xF5 -> N6e
+    0xF6 -> N6k
+    0xFC -> N6a
+    0xDD -> N6i
+    0xEE -> N6n
+    0xFE -> N7c
+    0xFD -> N7e
+    _    -> N8
+  where
+    isotropicize :: Word8 -> Word8
+    isotropicize x = foldr min maxBound [f . flip Bits.rotate (2*k) $! x | !k <- [0..3], f <- [id, flip Bits.rotate 1 . reverseBits8]]

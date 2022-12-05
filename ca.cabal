@@ -16,7 +16,9 @@ library
                      , Data.Neighborhood.Moore
                      , Data.Rule.Hex
                      , Data.Rule.Moore
-  other-modules:       Data.OrdOfEnum
+  other-modules:
+    Data.OrdOfEnum
+    Util.Private.Bits
   -- other-extensions:    
   build-depends:       Fin
                      , base >=4.10 && <5
