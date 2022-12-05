@@ -1,6 +1,6 @@
 {-# OPTIONS_GHC -Wno-error=incomplete-patterns -Wno-error=incomplete-uni-patterns #-}
 
-module Data.Rule.Moore (Rule, bits, tabulate, fromFn,
+module Data.Rule.Moore (Rule, bits, tabulate, fromFn, toFn,
                         birth, death, survival, antisurvival) where
 
 import Prelude hiding (Eq, Ord)
@@ -62,6 +62,9 @@ instance Show Rule where
 fromFn :: (Nbhd -> Bool -> Bool) -> Rule
 fromFn = foldr (uncurry go) zeroBits . flip filter universe . uncurry
   where go nbhd cell = flip setBit $ fromEnum nbhd + bool 0 64 cell
+
+toFn :: Rule -> Nbhd -> Bool -> Bool
+toFn rule nbhd cell = testBit rule (fromEnum nbhd + bool 0 64 cell)
 
 birth, death, survival, antisurvival :: Rule -> [Nbhd]
 birth = fmap toEnum . setBits . (.&. 0xFFFFFFFFFFFFFFFF) . bits
