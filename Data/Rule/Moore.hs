@@ -45,8 +45,8 @@ instance Read Rule where
         optional (ReadP.char '/')      <* ReadP.satisfy ((==) 'S' . toUpper) <*> nbhds
       where nbhds :: ReadP Word128
             nbhds = fmap (foldr (flip setBit . fromEnum) zeroBits . asum) . many $
-                    bind2 cfg ((− fromEnum' '0') . fromEnum' <$> ReadP.satisfy isDigit)
-                    (many $ toLower <$> ReadP.satisfy ((∈ "cekainyqjrtwz") . toLower))
+                    bind2 cfg' ((− fromEnum' '0') . fromEnum' <$> ReadP.satisfy isDigit)
+                    (maybe id (:) <$> optional (ReadP.char '-') <*> many (toLower <$> ReadP.satisfy ((∈ "cekainyqjrtwz") . toLower)))
 
             (−) = (-)
 
@@ -121,6 +121,10 @@ reverseBits :: FiniteBits a => a -> a
 reverseBits = fromListLE . toListBE
 
 type Word512 = LargeKey Word256 Word256
+
+cfg' :: Alternative f => Word -> [Char] -> f [Nbhd]
+cfg' n ('-':xs) = (List.\\) <$> cfg n [] <*> cfg n xs
+cfg' n xs = cfg n xs
 
 cfg :: Alternative f => Word -> [Char] -> f [Nbhd]
 cfg 0 [] = pure [N0]
